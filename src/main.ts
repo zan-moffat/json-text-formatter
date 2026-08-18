@@ -1,60 +1,110 @@
-import './style.css'
-import typescriptLogo from './assets/typescript.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import { setupCounter } from './counter.ts'
+import "./style.css";
+import { formatDeck } from "./formatter";
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${typescriptLogo}" class="framework" alt="TypeScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.ts</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
+  <main class="page">
+    <header>
+      <h1>JSON Deck Formatter</h1>
+      <p>Paste a deck’s JSON below and convert it to the bespoke format.</p>
+    </header>
 
-<div class="ticks"></div>
+    <section class="formatter">
+      <div class="field">
+        <label for="json-input">JSON input</label>
+        <textarea
+          id="json-input"
+          placeholder='Paste JSON here...'
+          spellcheck="false"
+        ></textarea>
+      </div>
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://www.typescriptlang.org" target="_blank">
-          <img class="button-icon" src="${typescriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+      <div class="actions">
+        <button id="convert-button" class="primary">Convert</button>
+        <button id="clear-button" class="secondary">Clear</button>
+      </div>
 
-<div class="ticks"></div>
-<section id="spacer"></section>
-`
+      <p id="error-message" class="error" role="alert"></p>
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+      <div class="field">
+        <label for="formatted-output">Formatted output</label>
+        <textarea
+          id="formatted-output"
+          placeholder="The formatted deck will appear here..."
+          readonly
+          spellcheck="false"
+        ></textarea>
+      </div>
+
+      <button id="copy-button" class="secondary" disabled>
+        Copy output
+      </button>
+    </section>
+  </main>
+`;
+
+const input = document.querySelector<HTMLTextAreaElement>("#json-input");
+const output =
+  document.querySelector<HTMLTextAreaElement>("#formatted-output");
+const convertButton =
+  document.querySelector<HTMLButtonElement>("#convert-button");
+const clearButton =
+  document.querySelector<HTMLButtonElement>("#clear-button");
+const copyButton =
+  document.querySelector<HTMLButtonElement>("#copy-button");
+const errorMessage =
+  document.querySelector<HTMLParagraphElement>("#error-message");
+
+if (
+  !input ||
+  !output ||
+  !convertButton ||
+  !clearButton ||
+  !copyButton ||
+  !errorMessage
+) {
+  throw new Error("The application interface could not be initialized.");
+}
+
+convertButton.addEventListener("click", () => {
+  errorMessage.textContent = "";
+
+  try {
+    output.value = formatDeck(input.value);
+    copyButton.disabled = false;
+  } catch (error) {
+    output.value = "";
+    copyButton.disabled = true;
+
+    errorMessage.textContent =
+      error instanceof Error
+        ? error.message
+        : "An unexpected error occurred.";
+  }
+});
+
+clearButton.addEventListener("click", () => {
+  input.value = "";
+  output.value = "";
+  errorMessage.textContent = "";
+  copyButton.disabled = true;
+  input.focus();
+});
+
+copyButton.addEventListener("click", async () => {
+  if (!output.value) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(output.value);
+
+    copyButton.textContent = "Copied!";
+
+    window.setTimeout(() => {
+      copyButton.textContent = "Copy output";
+    }, 1500);
+  } catch {
+    errorMessage.textContent =
+      "The browser could not copy the output. Select and copy it manually.";
+  }
+});
